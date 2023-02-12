@@ -49,6 +49,26 @@ A specific version of the SDK can be obtained from:
 - why are _so_ many of the strings not automatically defined?
     - idk man its a data section, ghidra automagically does it but i felt like making a binary ninja plugin
 
+## Minimum Version
+
+This plugin requires the following minimum version of Binary Ninja:
+
+* 3164
+
+## Required Dependencies
+
+The following dependencies are required for this plugin:
+
+ * pip - SQLAlchemy==2.0.1
+ * apt - clang
+ * installers - 
+ * other - 
+
+
 ## License
 
 This plugin is released under an [MIT license](./license).
+
+## Metadata Version
+
+2
