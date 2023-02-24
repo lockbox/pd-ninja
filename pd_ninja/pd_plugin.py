@@ -10,16 +10,14 @@ from binaryninja.log import log_error
 from binaryninja.binaryview import BinaryView
 from binaryninja.typeparser import TypeParser
 
-from .pd_view import PDViewType
-from .pd_view import PlayDateView
 from .pd_magic import IVT_LEN
 from .pd_magic import PD_HEADER_FLAGS
 from .pd_magic import PLAYDATE_KERNEL_START
 from .pd_magic import STM32F7_IVT_NAMES
+from .pd_magic import get_system_headers
 from .pd_utils import get_sdk_root
 from .pd_utils import addr_valid
 from .pd_utils import dest_section
-from .pd_types import get_system_headers
 from .pd_types import make_stable_library
 from .pd_symbols_db import SymbolsDB
 
@@ -32,14 +30,13 @@ def apply_symbols_db(bv: BinaryView):
     bv : BinaryView
         SDK to process
     """
-    if bv.name != PlayDateView.name:
-        log_error("Only works on a binary view for the playdate!")
+    pd_sdk = get_sdk_root()
+    if not pd_sdk:
+        log_info("Failed to provide SDK path")
         return
 
-    pd_sdk = get_sdk_root()
-
     thumb_addr_mask = 0xFFFFFFFE
-    s = SymbolsDB(pd_sdk.pd_symbols_path)
+    s = SymbolsDB(pd_sdk.symbols_db)
     log_info(f"Loading symbols from symbols.db")
 
     # note the omission of "strip_hideen=True", we postprocess here
@@ -55,10 +52,10 @@ def apply_symbols_db(bv: BinaryView):
     # patently false, they're just a bunch of linker symbols
     for f in funcs:
         # don't need to worry about any kernel / user distinctions here
-        if not addr_valid(f.address):
+        if not addr_valid(bv, f.address):
             continue
 
-        section = dest_section(f.address)
+        section = dest_section(bv, f.address)
         address = f.address & thumb_addr_mask
 
         # depending on the semantics of the section we will create
@@ -102,11 +99,10 @@ def import_sdk_header(bv: BinaryView):
     bv : BinaryView
         bv to load the types into
     """
-    if bv.name != PlayDateView.name:
-        log_error("Only works on a binary view for the playdate!")
-        return
-
     pd_sdk = get_sdk_root()
+    if not pd_sdk:
+        log_info("Failed to provide SDK path")
+        return
 
     # import the header file for the playdate SDK
     with open(str(pd_sdk.header_path), "r") as f:
@@ -148,31 +144,32 @@ def add_platform_symbols(bv: BinaryView):
     bv : BinaryView
         bv to modify
     """
-    if bv.name != PlayDateView.name:
-        log_error("Only works on a binary view for the playdate!")
+    # if we have a dump that contains the kernel + bootlaoder, tag the IVT
+    log_info("Adding IVT Table")
+    # apply IVT Type
+    ivt_type = bv.get_type_by_name("IVT_TABLE")
+    if not ivt_type:
+        log_error("Must add pd-ninja types first!")
         return
 
-    # if we have a dump that contains the kernel + bootlaoder, tag the IVT
-    if bv.pd_view_type in [PDViewType.FULL, PDViewType.KERNEL]:
-        # apply IVT Type
-        ivt_type = bv.get_type_by_name("IVT_TABLE")
-        bv.define_user_data_var(PLAYDATE_KERNEL_START, ivt_type)
-        bv.define_user_symbol(
-            Symbol(SymbolType.DataSymbol,
-                    PLAYDATE_KERNEL_START, "ivt_table")
-        )
+    bv.define_user_data_var(PLAYDATE_KERNEL_START, ivt_type)
+    bv.define_user_symbol(
+        Symbol(SymbolType.DataSymbol,
+                PLAYDATE_KERNEL_START, "ivt_table")
+    )
 
-        # the first value in the IVT is the stack pointer, not a pointer
-        thumb_addr_mask = 0xFFFFFFFE  # binary ninja is bad at thumb
-        ivt_labels_start = PLAYDATE_KERNEL_START + 4
-        ivt_labels_end = ivt_labels_start + (IVT_LEN - 4)
-        for i, addr in enumerate(range(ivt_labels_start, ivt_labels_end, 4)):
-            # this iterator starts from 1 idx
-            name = STM32F7_IVT_NAMES[i + 1]
-            value = bv.read_int(addr, 4, False) & thumb_addr_mask
-            bv.define_auto_symbol(
-                Symbol(SymbolType.FunctionSymbol, value, name))
+    # the first value in the IVT is the stack pointer, not a pointer
+    thumb_addr_mask = 0xFFFFFFFE  # binary ninja is bad at thumb
+    ivt_labels_start = PLAYDATE_KERNEL_START + 4
+    ivt_labels_end = ivt_labels_start + (IVT_LEN - 4)
+    for i, addr in enumerate(range(ivt_labels_start, ivt_labels_end, 4)):
+        # this iterator starts from 1 idx
+        name = STM32F7_IVT_NAMES[i + 1]
+        value = bv.read_int(addr, 4, False) & thumb_addr_mask
+        bv.define_auto_symbol(
+            Symbol(SymbolType.FunctionSymbol, value, name))
 
+    log_info("not adding platform types")
 
 def apply_stabilized_types(bv: BinaryView):
     """Applies known types to known symbols. TODO

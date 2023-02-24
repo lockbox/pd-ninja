@@ -2,23 +2,12 @@
 """Loads a custom BinaryView for the Playdate Console
 """
 from enum import Enum
-from pathlib import Path
 
 from binaryninja.architecture import Architecture
 from binaryninja.binaryview import BinaryView, SectionSemantics, SegmentFlag
-from binaryninja.interaction import get_choice_input
-from binaryninja.interaction import get_directory_name_input
 from binaryninja.log import log_info
-from binaryninja.log import log_error
-from binaryninja.types import Symbol, SymbolType
-from binaryninja.typeparser import TypeParser
-from binaryninja.binaryview import Section
 
 # import necessary magic things to look for
-from .pd_magic import make_yolo_library
-from .pd_magic import make_stable_library
-from .pd_magic import get_system_headers
-from .pd_magic import PD_HEADER_FLAGS
 from .pd_magic import KERNEL_TOKEN_LIST
 from .pd_magic import PLAYDATE_KERNEL_START
 from .pd_magic import PLAYDATE_RAM_START
@@ -35,8 +24,7 @@ from .pd_magic import PLAYDATE_MEM_SIZE
 from .pd_magic import PLAYDATE_ROUGH_USER_SIZE
 from .pd_magic import USER_TOKEN_LIST
 from .pd_magic import PLAYDATE_USER_DATA_SEARCH_START
-
-from .pd_symbols_db import SymbolsDB
+from .pd_magic import PLAYDATE_FULL_DUMP_ENTRY_12_3
 
 
 class PDViewType(Enum):
@@ -129,15 +117,21 @@ class PlayDateView(BinaryView):
         # set entry
         if self.pd_view_type in [PDViewType.FULL, PDViewType.KERNEL]:
             entry_symbol = self.get_symbol_by_raw_name(STM32F7_IVT_NAMES[1])
-            self.add_entry_point(entry_symbol.address & thumb_addr_mask)
+            # fall back to known default
+            if not entry_symbol:
+                self.add_entry_point(PLAYDATE_FULL_DUMP_ENTRY_12_3)
+            else:
+                self.add_entry_point(entry_symbol.address & thumb_addr_mask)
         else:
             self.add_entry_point(PLAYDATE_USER_START)
 
     def perform_get_entry_point(self) -> int:
         if self.pd_view_type in [PDViewType.FULL, PDViewType.KERNEL]:
-            # return 0x80001c8
             thumb_addr_mask = 0xFFFFFFFE
             entry_symbol = self.get_symbol_by_raw_name(STM32F7_IVT_NAMES[1])
+            # fall back to known default
+            if not entry_symbol:
+                return PLAYDATE_FULL_DUMP_ENTRY_12_3
             return entry_symbol.address & thumb_addr_mask
         else:
             # user
@@ -207,10 +201,6 @@ class PlayDateView(BinaryView):
         """Figures out what type of dump we are dealing with. The likely
         candidates are user dump or a full dump.
         """
-        # we only load from a binary blob, which has 0 on inital view
-        if len(bv.segments) > 0:
-            return PDViewType.INVALID
-
         view_type = PDViewType.INVALID
         size = bv.end - bv.start
 
