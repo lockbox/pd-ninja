@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # noqa
 """Random magic for the Playdate"""
-import os
 import subprocess
 
-from time import sleep
 from typing import List
 from typing import NamedTuple
 
+PLAYDATE_FULL_DUMP_ENTRY_12_3 = 0x80001c8
 PLAYDATE_RAM_START = 0x20000000
 PLAYDATE_RAM_END = 0x20050000
 PLAYDATE_MEM_START = 0x08000000
