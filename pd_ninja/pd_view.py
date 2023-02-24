@@ -12,7 +12,6 @@ from binaryninja.log import log_info
 from binaryninja.log import log_error
 from binaryninja.types import Symbol, SymbolType
 from binaryninja.typeparser import TypeParser
-from binaryninja.typelibrary import TypeLibrary
 from binaryninja.binaryview import Section
 
 # import necessary magic things to look for
@@ -28,7 +27,6 @@ from .pd_magic import IVT_LEN
 from .pd_magic import PLAYDATE_MEM_START
 from .pd_magic import PLAYDATE_USER_SIZE
 from .pd_magic import PLAYDATE_USER_END
-from .pd_magic import PLAYDATE_KERNEL_END
 from .pd_magic import PLAYDATE_USER_START
 from .pd_magic import STM32F7_IVT_NAMES
 from .pd_magic import STM32F7_SRAM_REGIONS
