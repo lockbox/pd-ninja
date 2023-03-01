@@ -59,7 +59,7 @@ This plugin requires the following minimum version of Binary Ninja:
 
 The following dependencies are required for this plugin:
 
- * pip - SQLAlchemy==2.0.1
+ * pip - SQLAlchemy>=2.0.1
  * apt - clang
  * installers - 
  * other - 
