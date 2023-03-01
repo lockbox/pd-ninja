@@ -24,7 +24,7 @@
     "Windows": ""
   },
   "dependencies": {
-    "pip": ["SQLAlchemy==2.0.1"],
+    "pip": ["SQLAlchemy>=2.0.0"],
     "apt": ["clang"],
     "installers": [],
     "other": []
