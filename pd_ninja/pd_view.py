@@ -59,7 +59,10 @@ class PlayDateView(BinaryView):
         self.pd_mem_size: int = 0
 
     def create_sections(self):
-        # add the proper semantic sections on top of the data segments
+        # add the proper semantic sections on top of the data segments\
+
+        # slam all these sections into a single undo operation
+        self.begin_undo_actions()
 
         if self.pd_view_type in [PDViewType.FULL, PDViewType.KERNEL]:
             # add IVT section
@@ -84,6 +87,9 @@ class PlayDateView(BinaryView):
         user_data_start = PLAYDATE_USER_START + user_code_len
         self.add_user_section("Usermode Data", user_data_start, PLAYDATE_USER_END -
                               user_data_start, SectionSemantics.ReadOnlyDataSectionSemantics)
+
+        # end undo actions - all these segments will be removed as 1 unit
+        self.commit_undo_actions()
 
     def create_segments(self):
         # add SRAM regions
@@ -241,3 +247,7 @@ class PlayDateView(BinaryView):
 
         # we've now determined that this is a valid playdate view
         return True
+
+    def perform_get_address_size(self) -> int:
+        """This should be the sane default"""
+        return self.arch.address_size

@@ -122,6 +122,10 @@ def import_sdk_header(bv: BinaryView):
         types = parsed[0].types
         functions = parsed[0].functions
 
+        if parsed is None:
+            log_error("Failed parsing header file")
+            return
+
         # add the functions and types so we can actually use them
         for t in types:
             bv.define_user_type(t.name, t.type)
@@ -155,7 +159,7 @@ def add_platform_symbols(bv: BinaryView):
     bv.define_user_data_var(PLAYDATE_KERNEL_START, ivt_type)
     bv.define_user_symbol(
         Symbol(SymbolType.DataSymbol,
-                PLAYDATE_KERNEL_START, "ivt_table")
+               PLAYDATE_KERNEL_START, "ivt_table")
     )
 
     # the first value in the IVT is the stack pointer, not a pointer
@@ -169,7 +173,8 @@ def add_platform_symbols(bv: BinaryView):
         bv.define_auto_symbol(
             Symbol(SymbolType.FunctionSymbol, value, name))
 
-    log_info("not adding platform types")
+    log_info("Added IVT_TABLE and created appropriate function pointers")
+
 
 def apply_stabilized_types(bv: BinaryView):
     """Applies known types to known symbols. TODO
@@ -179,6 +184,7 @@ def apply_stabilized_types(bv: BinaryView):
     bv : BinaryView
         bv to modify
     """
+
 
 def register_plugin():
     PluginCommand.register("pd-ninja\Load Symbols.db",
